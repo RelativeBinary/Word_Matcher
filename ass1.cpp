@@ -126,15 +126,13 @@ Word_Type* Insert(Word_Type* root, std::string word, bool isUnique, bool inDicti
         return LeftRotate(root);
 
     // Left Right Case
-    if (balance > 1 && word > root->left->word)
-    {
+    if (balance > 1 && word > root->left->word){
         root->left = LeftRotate(root->left);
         return RightRotate(root);
     }
 
     // Right Left Case
-    if (balance < -1 && word < root->right->word)
-    {
+    if (balance < -1 && word < root->right->word){
         root->right = RightRotate(root->right);
         return LeftRotate(root);
     }
@@ -151,14 +149,6 @@ bool Search(Word_Type* root, std::string word){
     } else if (root->word == word){
         //this will only execute when the first duplicate of a word is searched
         //std::cout << "Search success: " << root->word << " || uwords count: " << Word_Type::uwords << " || udwords count: " << Word_Type::udwords << std::endl;
-        if (root->isUnique) {
-            root->isUnique = false;
-            Word_Type::uwords--;
-            if(root->inDic){
-                Word_Type::udwords--;
-            }
-            //std::cout << "First Time Duplicate: " << root->word << " || uwords count: " << Word_Type::uwords << " || udwords count: " << Word_Type::udwords << "|| isUni: " << root->isUnique << std::endl;
-        }
         return true;
     } else if (word <= root->word){
         return Search(root->left, word);
@@ -189,7 +179,7 @@ void InOrderUnique(Word_Type* root){
 
     //data
     if (root->isUnique == true) {
-        std::cout << root->word << " ";
+        //std::cout << root->word << " ";
     }
 
     //right
@@ -203,7 +193,8 @@ void Unique2Array(Word_Type* root, std::string* uwords_arr, int &end_uwords_arr)
     //left, data, right
 
     //left
-    if(root->left != nullptr) InOrderUnique(root->left);
+    if(root->left != nullptr)
+        Unique2Array(root->left, uwords_arr, end_uwords_arr);
 
     //data
     if (root->isUnique == true) {
@@ -212,12 +203,53 @@ void Unique2Array(Word_Type* root, std::string* uwords_arr, int &end_uwords_arr)
     }
 
     //right
-    if(root->right != nullptr) InOrderUnique(root->right);
+    if(root->right != nullptr)
+        Unique2Array(root->right, uwords_arr, end_uwords_arr);
 
     //exit
     if(root->left == nullptr && root->right == nullptr) return;
 }
 
+
+#pragma endregion
+
+//STEP 4 FUNCTIONS
+#pragma region
+//partition functions used in quicksort
+int partition(char *arr, int ast, int aen){
+    int piv = arr[aen];
+    int parIn = ast; //initialize start partition at the start of array
+    for (int i = ast; i < aen; i++){
+        if(arr[i] <= piv){ //move larger elements toward end of arr, move smaller elements toward start of arr
+            std::swap(arr[i], arr[parIn]);
+            parIn++;
+        }
+    }
+    std::swap(arr[parIn], arr[aen]);
+    return parIn;
+}
+//quick sort function
+void qsort(char *arr, int ast, int aen){
+    if (ast < aen){
+        int parIn = partition(arr, ast, aen);
+        qsort(arr, ast, parIn - 1);
+        qsort(arr, parIn + 1, aen);
+    }
+}
+//used in step 4 to sort the unique word needed for comparisons with an additionally sorted dictionary word
+void sort(std::string* word, int s, int e){
+    char arr[35];
+    int arr_end = 0;
+    for (char c : (*word)){
+        arr[arr_end] = c;
+        arr_end++;
+    }
+    qsort(arr, s, e);
+    
+    for (int i = 0; i < arr_end; i++){
+        (*word)[i] = arr[i];
+    }
+}
 
 #pragma endregion
 
@@ -370,7 +402,7 @@ int main(){
     #pragma region
 
     //Read the input sample.txt file
-    inword.open("other.txt");
+    inword.open("sample.txt");
     if (!inword.is_open()){ return -1;}
     std::string nword;
     Word_Type* rootptr;
@@ -429,9 +461,9 @@ int main(){
     std::string uwords_arr[500];
     int end_uwords_arr = 0;
     Unique2Array(rootptr, uwords_arr, end_uwords_arr);
-
-    /*
-    std::cout << "Displaying all the words found in the file: " << std::endl;
+    
+    //testing functions that print out the AVL tree data via inOrder traversal
+    /*std::cout << "Displaying all the words found in the file: " << std::endl;
     InOrder(rootptr);
     std::cout << std::endl;
     
@@ -453,9 +485,65 @@ int main(){
 /*
     //STRAT 1: for each word in unique_words array, create search and sort permutatioins, if valid print, increment amagram_words and increment anagrams_found, keep count of word which had most anagrams and how many and its index in uniquewords array, repeat for next permutation, repeat for next word, be sure to do more than a binary search
 */
+    std::string anagrams[500];
+    int end_anagrams = 0, max_anagrams = 0, total_anagrams = 0;
+    int s4_matches = 0, max_anagram_index, anagram_words = 0, anagrams_found= 0;
+    int largest_anagram_index, largest_anagram_size = 0;
+    std::string largest_anagram_sample = "";
+    for (int i = 1; i < end_uwords_arr; i++){
+        //create sorted alternative (potential optimization check if word is more than 1 character long before doing all this)
+        std::string sort_origin = uwords_arr[i];
+        sort(&sort_origin, 0, sort_origin.size()-1);
+        for (int j = 1; j < end; j++){
+            //for each word in dictionary of the same size
+            if (dic[j].size() == sort_origin.size()){
+                std::string dword = dic[j];
+                //create sorted dword (dictionary word)
+                sort(&dword, 0, dword.size()-1);
+                //compare with original sorted word
+                if (dword == sort_origin && uwords_arr[i] != dic[j]){
+                    //add to anagrams array if anagram
+                    end_anagrams++;
+                    anagrams[end_anagrams] = dic[j];
+                    //increment number of anagrams found
+                    anagrams_found++;
+                }
+            }
+        }
+        //print out all the anagrams found for current unique word which has more than 1
+        if (end_anagrams > 0){
+            //increment number of unique words which had anagrams
+            anagram_words++;
+            //check if current unique word has potential to be the largest word with anagram(s)
+            if (uwords_arr[i].size() > largest_anagram_size) {
+                largest_anagram_index = i;
+                largest_anagram_size = uwords_arr[i].size();
+                largest_anagram_sample = anagrams[1];
+                
+            }
 
-
-
+            //print anagrams only for first 10 unique words
+            if(s4_matches < 10){
+                std::cout << uwords_arr[i] << ": ";
+                for (int j = 1; j <= end_anagrams; j++){
+                    std::cout << anagrams[j] << " ";
+                }
+                std::cout << std::endl;
+                s4_matches++;
+            }
+        }
+        //determine if this uword had the most anagrams
+        if (end_anagrams > max_anagrams){
+            max_anagram_index = i;
+            max_anagrams = end_anagrams;
+        }
+        end_anagrams = 0;
+    }
+    std::cout << "Word that had the most anagrams: " << uwords_arr[max_anagram_index] << " => " << max_anagrams << " anagrams.\n";
+    std::cout << "Largest valid word that has an anagram: " << uwords_arr[largest_anagram_index] /*<<" => " << largest_anagram_sample*/ << std::endl;
+    std::cout << "Total amount of words with anagrams: " << anagram_words << std::endl;
+    std::cout << "Total anagrams found: " << anagrams_found << std::endl;
+ 
 }
 
 
